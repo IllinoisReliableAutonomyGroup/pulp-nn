@@ -61,7 +61,14 @@ void pulp_nn_linear(
 
     if (bias != NULL)
     {
-      sum = ((int)(bias[i]));
+      /* DORY emits int32 biases -- bias_bits is fixed at 32 in the frontends, the
+       * generated DMA descriptor copies 4 bytes per neuron (length_1d_copy =
+       * 4*num_o_neurons), and pulp_nn_linear_out_32 in this same directory
+       * already reads them this way. Indexing bias[i] through the int8_t*
+       * parameter instead walked the low bytes of the first quarter of the
+       * array, so every hidden layer got a wrong -- usually near-zero -- bias.
+       * The parameter stays int8_t* to keep the ABI DORY generates calls against. */
+      sum = *(int32_t *)(bias + 4*i);
     }
 
     uint8_t *pA = pInBuffer;
